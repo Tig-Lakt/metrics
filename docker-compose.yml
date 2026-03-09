@@ -1,0 +1,109 @@
+services:
+    db:
+      image: postgres:15-alpine
+      container_name: postgres_db
+      environment:
+        POSTGRES_USER: ${DB_USER}
+        POSTGRES_PASSWORD: ${DB_PASSWORD}
+        POSTGRES_DB: ${DB_NAME}
+      volumes:
+      - postgres_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+      networks:
+        - app-network
+
+    app:
+      build: .
+      container_name: fastapi_app
+      environment:
+        PYTHONPATH: /app
+        DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+        DB_HOST: db
+        DB_PORT: 5432
+        DB_USER: ${DB_USER}
+        DB_PASSWORD: ${DB_PASSWORD}
+        DB_NAME: ${DB_NAME}
+      env_file:
+        - .env
+      ports:
+        - "8000:8000"
+      depends_on:
+        db:
+          condition: service_healthy
+      networks:
+        - app-network
+      logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "3" 
+          tag: "{{.Name}}"
+
+    prometheus:
+      image: prom/prometheus:latest
+      container_name: prometheus
+      volumes:
+        - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+        - ./config/alert_rules.yml:/etc/prometheus/alert_rules.yml
+        - prometheus_data:/prometheus
+      command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      ports:
+        - "9090:9090"
+      networks:
+        - app-network
+
+    node-exporter:
+      image: prom/node-exporter:latest
+      container_name: node_exporter
+      ports:
+        - "9100:9100"
+      networks:
+        - app-network
+
+    loki:
+      image: grafana/loki:latest
+      container_name: loki
+      ports:
+        - "3100:3100"
+      networks:
+        - app-network
+
+    # Агент для сбора логов (Alloy или Promtail)
+    alloy:
+      image: grafana/alloy:latest
+      container_name: alloy
+      volumes:
+        - ./config/config.alloy:/etc/alloy/config.alloy
+        - /var/lib/docker/containers:/var/lib/docker/containers:ro
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+      command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+      networks:
+        - app-network
+
+    grafana:
+      image: grafana/grafana:latest
+      container_name: grafana
+      volumes:
+      - grafana_data:/var/lib/grafana
+      ports:
+        - "3000:3000"
+      environment:
+        - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+        - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      networks:
+        - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:

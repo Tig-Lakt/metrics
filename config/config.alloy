@@ -1,0 +1,29 @@
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.containers.targets
+  forward_to = [loki.process.add_labels.receiver]
+}
+
+loki.process "add_labels" {
+  // Извлекаем имя контейнера из метаданных Docker
+  stage.docker { }
+
+  // Явно переименовываем метку для удобного поиска
+  stage.labels {
+    values = {
+      container_name = "container_name",
+    }
+  }
+
+  forward_to = [loki.write.local_loki.receiver]
+}
+
+loki.write "local_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
