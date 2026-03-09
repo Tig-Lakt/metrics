@@ -25,3 +25,4 @@ REQUEST_COUNT = Counter("http_requests_total", "Total requests", ["method", "end
 LATENCY_HISTOGRAM = Histogram("http_request_duration_seconds", "Latency", ["endpoint"])
 
 ENDPOINT_PROCESS = "/process"
+BASE_URL = "http://45.153.188.175/"
