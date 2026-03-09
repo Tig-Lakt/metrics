@@ -1,0 +1,16 @@
+groups:
+  - name: fastapi_alerts
+    rules:
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 0.5
+        for: 1m
+        annotations:
+          summary: "Высокая задержка на эндпоинте"
+          description: "Латентность выше 0.5с (текущее значение {{ $value }}s)"
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        annotations:
+          summary: "Сервис упал"
+          description: "Контейнер {{ $labels.instance }} недоступен."
