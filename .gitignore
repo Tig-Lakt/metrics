@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Виртуальные окружения
+venv/
+.venv/
+env/
+
+# Переменные окружения / секреты
+.env
+
+# Тесты и линтеры
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
